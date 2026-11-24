@@ -21,11 +21,11 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DEBS_DIR = os.path.join(ROOT, "debs")
 
-ORIGIN = os.environ.get("REPO_ORIGIN", "peipei7-1 Repo")
-LABEL = os.environ.get("REPO_LABEL", "peipei7-1 Repo")
+ORIGIN = os.environ.get("REPO_ORIGIN", "七七爱睡懒觉")
+LABEL = os.environ.get("REPO_LABEL", "七七爱睡懒觉")
 SUITE = os.environ.get("REPO_SUITE", "stable")
 CODENAME = os.environ.get("REPO_CODENAME", "stable")
-DESCRIPTION = os.environ.get("REPO_DESCRIPTION", "Personal iOS jailbreak tweak repository")
+DESCRIPTION = os.environ.get("REPO_DESCRIPTION", "七七爱睡懒觉的 iOS 越狱插件源")
 ARCHITECTURES = os.environ.get("REPO_ARCHITECTURES", "iphoneos-arm64 iphoneos-arm all")
 
 

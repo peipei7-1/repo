@@ -1,4 +1,6 @@
-# peipei7-1 Repo
+# 七七爱睡懒觉
+
+![源图标](CydiaIcon.png)
 
 iOS 越狱插件源(Sileo / Zebra 兼容),基于 GitHub Pages 托管。
 
