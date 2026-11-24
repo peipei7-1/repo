@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
-"""Generate Packages / Packages.gz / Release indexes for a Sileo/Cydia repo.
+"""Generate Packages / Packages.gz / Packages.bz2 / Release for a Sileo/Cydia repo.
 
 Pure-stdlib, no dpkg-deb needed. Works on macOS and Linux CI.
 Reads .deb files from ./debs, parses their control metadata, and writes:
   Packages       - plain index
-  Packages.gz    - gzip index (what Sileo actually downloads)
+  Packages.gz    - gzip index (Sileo downloads this)
+  Packages.bz2   - bzip2 index (Cydia / older clients)
   Release        - repo metadata + checksums
-  Release.gpg is intentionally omitted (unsigned repo, fine for Sileo/Zebra).
+Optional per-package extras (auto-detected by Package name):
+  icons/<Package>.png        -> Icon: field
+  depictions/<Package>.json  -> Depiction: / SileoDepiction: fields
+Release.gpg is intentionally omitted (unsigned repo, fine for Sileo/Zebra).
 """
 
+import bz2
 import gzip
 import hashlib
+import io
 import os
-import re
 import sys
 import tarfile
-import io
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DEBS_DIR = os.path.join(ROOT, "debs")
+ICON_DIR = os.path.join(ROOT, "icons")
+DEPICTION_DIR = os.path.join(ROOT, "depictions")
 
 ORIGIN = os.environ.get("REPO_ORIGIN", "七七爱睡懒觉")
 LABEL = os.environ.get("REPO_LABEL", "七七爱睡懒觉")
@@ -27,6 +33,11 @@ SUITE = os.environ.get("REPO_SUITE", "stable")
 CODENAME = os.environ.get("REPO_CODENAME", "stable")
 DESCRIPTION = os.environ.get("REPO_DESCRIPTION", "七七爱睡懒觉的 iOS 越狱插件源")
 ARCHITECTURES = os.environ.get("REPO_ARCHITECTURES", "iphoneos-arm64 iphoneos-arm all")
+
+# Icon / Depiction URL base (GitHub Pages address)
+BASE_URL = os.environ.get("REPO_BASE_URL", "https://peipei7-1.github.io/repo").rstrip("/")
+
+INDEX_FILES = ("Packages", "Packages.gz", "Packages.bz2")
 
 
 def read_deb_control(path):
@@ -71,8 +82,7 @@ def read_deb_control(path):
 
     with tarfile.open(fileobj=io.BytesIO(ctrl_blob), mode="r:") as tf:
         for member in tf.getmembers():
-            base = os.path.basename(member.name)
-            if base == "control":
+            if os.path.basename(member.name) == "control":
                 return tf.extractfile(member).read()
     raise ValueError("no control file inside control.tar of %s" % path)
 
@@ -94,16 +104,8 @@ def parse_control(raw):
     return fields
 
 
-def sha256(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def md5(path):
-    h = hashlib.md5()
+def hash_file(path, algo):
+    h = hashlib.new(algo)
     with open(path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
             h.update(chunk)
@@ -126,26 +128,39 @@ def main():
         try:
             fields = parse_control(read_deb_control(full))
             fields = [(k, v) for k, v in fields if k.lower() != "sha256"]
+
+            # Auto-detect optional Icon / Depiction by Package name
+            pkg_name = next((v for k, v in fields if k.lower() == "package"), None)
+            if pkg_name:
+                icon = os.path.join(ICON_DIR, pkg_name + ".png")
+                if os.path.isfile(icon):
+                    fields.append(("Icon", "%s/icons/%s.png" % (BASE_URL, pkg_name)))
+                dep = os.path.join(DEPICTION_DIR, pkg_name + ".json")
+                if os.path.isfile(dep):
+                    url = "%s/depictions/%s.json" % (BASE_URL, pkg_name)
+                    fields.append(("Depiction", url))
+                    fields.append(("SileoDepiction", url))
+
             fields.extend([
                 ("Filename", "debs/" + name),
                 ("Size", str(os.path.getsize(full))),
-                ("SHA256", sha256(full)),
-                ("MD5sum", md5(full)),
+                ("SHA256", hash_file(full, "sha256")),
+                ("MD5sum", hash_file(full, "md5")),
             ])
-            block = "\n".join("%s: %s" % (k, v) for k, v in fields)
-            blocks.append(block)
+            blocks.append("\n".join("%s: %s" % (k, v) for k, v in fields))
             print("indexed: %s" % name)
         except Exception as exc:
             print("WARN skipping %s: %s" % (name, exc), file=sys.stderr)
 
-    packages = "\n\n".join(blocks) + "\n" if blocks else ""
-    pkg_path = os.path.join(ROOT, "Packages")
-    with open(pkg_path, "w", encoding="utf-8") as fh:
+    packages = ("\n\n".join(blocks) + "\n") if blocks else ""
+    with open(os.path.join(ROOT, "Packages"), "w", encoding="utf-8") as fh:
         fh.write(packages)
 
-    gz_path = os.path.join(ROOT, "Packages.gz")
-    with gzip.open(gz_path, "wb") as fh:
-        fh.write(packages.encode("utf-8"))
+    raw = packages.encode("utf-8")
+    with gzip.open(os.path.join(ROOT, "Packages.gz"), "wb") as fh:
+        fh.write(raw)
+    with open(os.path.join(ROOT, "Packages.bz2"), "wb") as fh:
+        fh.write(bz2.compress(raw))
 
     now = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
     release = [
@@ -157,21 +172,18 @@ def main():
         "Architectures: " + ARCHITECTURES,
         "Components: main",
         "Description: " + DESCRIPTION,
-        "MD5Sum:",
     ]
-    for fname in ("Packages", "Packages.gz"):
-        fpath = os.path.join(ROOT, fname)
-        release.append(" %s %16d %s" % (md5(fpath), os.path.getsize(fpath), fname))
-    release.append("SHA256:")
-    for fname in ("Packages", "Packages.gz"):
-        fpath = os.path.join(ROOT, fname)
-        release.append(" %s %16d %s" % (sha256(fpath), os.path.getsize(fpath), fname))
+    for algo_label, algo in (("MD5Sum", "md5"), ("SHA256", "sha256")):
+        release.append(algo_label + ":")
+        for fname in INDEX_FILES:
+            fpath = os.path.join(ROOT, fname)
+            release.append(" %s %16d %s" % (hash_file(fpath, algo), os.path.getsize(fpath), fname))
     release.append("")
 
     with open(os.path.join(ROOT, "Release"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(release))
 
-    print("wrote Packages (%d packages), Packages.gz, Release" % len(blocks))
+    print("wrote %s (%d packages), Release" % (", ".join(INDEX_FILES), len(blocks)))
 
 
 if __name__ == "__main__":
