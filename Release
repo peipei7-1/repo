@@ -2,15 +2,15 @@ Origin: 七七爱睡懒觉
 Label: 七七爱睡懒觉
 Suite: stable
 Codename: stable
-Date: Tue, 24 Nov 2026 06:47:31 +0000
+Date: Tue, 24 Nov 2026 06:50:37 +0000
 Architectures: iphoneos-arm64 iphoneos-arm all
 Components: main
 Description: 七七爱睡懒觉的 iOS 越狱插件源
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e                0 Packages
- c1bb8e415f1563c474c5335ac56dea5c               29 Packages.gz
+ 6cf824795fc7a9dc17728c5cf1eaf34d               29 Packages.gz
  4059d198768f9f8dc9372dc1c54bc3c3               14 Packages.bz2
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855                0 Packages
- 38ac00a05ce7d798706c95eb507fbc64e5b8badc33bb48654e47c2bdba891c3f               29 Packages.gz
+ 1f012e5073bb4d21434f80a0f1313a06a091eb845a538b2cc9f5ad36f6a45f56               29 Packages.gz
  d3dda84eb03b9738d118eb2be78e246106900493c0ae07819ad60815134a8058               14 Packages.bz2
