@@ -1,0 +1,14 @@
+Origin: peipei7-1 Repo
+Label: peipei7-1 Repo
+Suite: stable
+Codename: stable
+Date: Tue, 24 Nov 2026 06:30:56 +0000
+Architectures: iphoneos-arm64 iphoneos-arm all
+Components: main
+Description: Personal iOS jailbreak tweak repository
+MD5Sum:
+ d41d8cd98f00b204e9800998ecf8427e                0 Packages
+ e139af273dd9a097a304b8562052295f               29 Packages.gz
+SHA256:
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855                0 Packages
+ 2cebee31c1c6c8771a25945a285c32037c4f68106fc00a4ae22d16424ab38e49               29 Packages.gz
